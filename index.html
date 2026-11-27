@@ -60,7 +60,7 @@ p b{color:var(--gold);font-weight:700}
 <div id="frame">
   <canvas id="c" width="640" height="480" aria-label="Runas de Cobre, juego de rol de acción 32 bits"></canvas>
 </div>
-<p><b>POR TURNOS:</b> Mover: <b>WASD / Flechas / Clic</b> · Atacar: <b>Caminar / Clic / Espacio</b> · Salto: <b>Shift + Mover</b> · Ficha Stats: <b>C</b> · <b>Casillas carmesí</b>: ataque enemigo</p>
+<p><b>POR TURNOS:</b> Mover: <b>WASD / Flechas / Clic</b> · Atacar: <b>Caminar / Clic / Espacio</b> · Cambiar arma: <b>X</b> · Salto: <b>Shift + Mover</b> · Ficha Stats: <b>C</b> · <b>Casillas carmesí</b>: ataque enemigo</p>
 <div id="pad"><div class="dp"><b data-k="KeyW">▲</b><b data-k="KeyA">◀</b><b data-k="KeyD">▶</b><b data-k="KeyS">▼</b></div><div class="ab"><b data-k="KeyK">B</b><b data-k="KeyJ">A</b></div></div>
 <script>
 /* ══════════════════════════════════════════════════════════════════════════
@@ -105,10 +105,10 @@ const EQ_POOL=[
  {id:'malla_tumbaga',slot:'helm',n:'Malla de Tumbaga',r:'Raro',c:'#e6b85c',hp:2,arm:1,dmg:0,expPct:0,goldPct:15,rng:1},
  {id:'pantalon_junco',slot:'legs',n:'Pantalón de Junco',r:'Común',c:'#78b878',hp:2,arm:0,dmg:0,expPct:10,goldPct:0,rng:1},
  {id:'pantalon_ofidio',slot:'legs',n:'Pantalón Ofidio',r:'Raro',c:'#68d898',hp:2,arm:1,dmg:0,expPct:15,goldPct:0,rng:1},
- {id:'espada_obsidiana',slot:'weapon',n:'Espada de Obsidiana',r:'Común',c:'#9ab4d4',hp:0,arm:0,dmg:1,expPct:0,goldPct:0,rng:1},
- {id:'espada_solar',slot:'weapon',n:'Espada Solar Muisca',r:'Raro',c:'#f0b848',hp:0,arm:0,dmg:2,expPct:0,goldPct:15,rng:1},
- {id:'arco_laguna',slot:'weapon',n:'Arco de la Laguna',r:'Raro',c:'#68e0c8',hp:0,arm:0,dmg:1,expPct:10,goldPct:0,rng:3,bow:true},
- {id:'arco_caza',slot:'weapon',n:'Arco Largo de Caza',r:'Épico',c:'#9ce888',hp:0,arm:0,dmg:2,expPct:15,goldPct:10,rng:3,bow:true},
+ {id:'espada_guerrero',slot:'weapon',n:'Espada Guerrero',r:'Común',c:'#9ab4d4',hp:0,arm:0,dmg:3,expPct:0,goldPct:0,rng:1,cooldown:2},
+ {id:'lanza',slot:'weapon',n:'Lanza',r:'Común',c:'#b88854',hp:0,arm:0,dmg:2,expPct:0,goldPct:0,rng:2,cooldown:2},
+ {id:'arco',slot:'weapon',n:'Arco',r:'Común',c:'#68e0c8',hp:0,arm:0,dmg:1,expPct:0,goldPct:0,rng:5,cooldown:3,bow:true},
+ {id:'dagas',slot:'weapon',n:'Dagas',r:'Común',c:'#d4a848',hp:0,arm:0,dmg:1,expPct:0,goldPct:0,rng:1,cooldown:1,doubleAttack:true},
  {id:'escudo_madera',slot:'shield',n:'Escudo de Madera',r:'Común',c:'#b88854',hp:0,arm:1,dmg:0,expPct:0,goldPct:0,rng:1},
  {id:'escudo_guatavita',slot:'shield',n:'Escudo de Guatavita',r:'Raro',c:'#5ce6ff',hp:0,arm:1,dmg:1,expPct:10,goldPct:10,rng:1}
 ];
@@ -127,9 +127,9 @@ const BOSS_LEG={
  buina:{id:'leg_corriente_buina',slot:'shield',n:'Escudo de Corriente de La Buina',r:'Legendario',c:'#52bfe6',hp:2,arm:2,dmg:1,expPct:25,goldPct:25,rng:2,leg:true}
 };
 function eqBonuses(){
- let hp=0,arm=0,dmg=0,expPct=0,goldPct=0,rng=1,bow=false;
- if(!P||!P.eq)return{hp,arm,dmg,expPct,goldPct,rng,bow};
- for(const sl of Object.keys(P.eq)){
+ let hp=0,arm=0,dmg=0,expPct=0,goldPct=0;
+ if(!P||!P.eq)return{hp,arm,dmg,expPct,goldPct};
+ for(const sl of ['helm','legs','shield']){
   const itEq=P.eq[sl];
   if(!itEq)continue;
   hp+=itEq.hp||0;
@@ -137,12 +137,19 @@ function eqBonuses(){
   dmg+=itEq.dmg||0;
   expPct+=itEq.expPct||0;
   goldPct+=itEq.goldPct||0;
-  if((itEq.rng||1)>rng)rng=itEq.rng||1;
-  if(itEq.bow)bow=true;
  }
- return{hp,arm,dmg,expPct,goldPct,rng,bow};
+ const weapon=activeWeapon();
+ if(weapon){
+  dmg+=weapon.dmg||0;
+  arm+=weapon.arm||0;
+  expPct+=weapon.expPct||0;
+  goldPct+=weapon.goldPct||0;
+ }
+ return{hp,arm,dmg,expPct,goldPct};
 }
-
+function activeWeaponSlot(){return P.activeWeapon==='secondary'?'weaponSecondary':'weaponPrimary'}
+function activeWeapon(){return P&&P.eq?P.eq[activeWeaponSlot()]||null:null}
+function weaponCooldown(){return P.weaponCooldowns?P.weaponCooldowns[P.activeWeapon]||0:0}
 /* ---- CÁLCULO CENTRAL DE LAS 5 ESTADÍSTICAS ---- */
 function getStats(){
  const b=eqBonuses();
@@ -156,13 +163,20 @@ function getStats(){
  };
 }
 function getAtkReach(){
- const b=eqBonuses();
+ const weapon=activeWeapon();
  const upReach=1+Math.floor((P.rng-1)/.5);
- return Math.max(upReach,b.rng);
+ return Math.max(upReach,weapon?weapon.rng||1:1);
 }
 function equipItem(item){
- const prev=P.eq[item.slot];
- P.eq[item.slot]=item;
+ let slot=item.slot;
+ if(slot==='weapon'){
+  if(!P.eq.weaponPrimary)slot='weaponPrimary';
+  else if(!P.eq.weaponSecondary)slot='weaponSecondary';
+  else slot=activeWeaponSlot();
+ }
+ const prev=P.eq[slot];
+ P.eq[slot]=item;
+ if(slot==='weaponPrimary'||slot==='weaponSecondary')P.weaponCooldowns[slot==='weaponSecondary'?'secondary':'primary']=0;
  const b=eqBonuses();
  const targetMax=P.baseMax+b.hp;
  const diff=targetMax-P.max;
@@ -170,7 +184,10 @@ function equipItem(item){
  if(diff>0)P.hp=Math.min(P.max,P.hp+diff);
  else P.hp=Math.min(P.max,P.hp);
  if(prev){
-  eqDrop.push({...prev,x:P.x+16,y:P.y+16});
+  const dropTile=[[1,0],[-1,0],[0,1],[0,-1]].find(([dx,dy])=>free(P.gx+dx,P.gy+dy));
+  const fallback=[P.gx<MW-1?1:-1,0];
+  const dx=dropTile?dropTile[0]:fallback[0],dy=dropTile?dropTile[1]:fallback[1];
+  eqDrop.push({...prev,x:(P.gx+dx)*T+10,y:(P.gy+dy)*T+10});
  }
  pop(P.x-12,P.y-18,item.n,item.c);
  burst(P.x+16,P.y+16,20,item.c,170);
@@ -184,7 +201,17 @@ function eqDesc(eq){
  if(eq.expPct)parts.push('+'+eq.expPct+'% EXP');
  if(eq.goldPct)parts.push('+'+eq.goldPct+'% Oro');
  if(eq.rng>1)parts.push('Alcance '+eq.rng);
+ if(eq.cooldown)parts.push('Recarga '+eq.cooldown+' turno'+(eq.cooldown===1?'':'s'));
+ if(eq.doubleAttack)parts.push('Ataca 2 veces');
  return parts.join(' · ')||'Equipo básico';
+}
+function switchWeapon(){
+ if(!P.eq.weaponSecondary){pop(P.x-16,P.y-18,'No hay arma secundaria','#8c8070');return}
+ P.activeWeapon=P.activeWeapon==='primary'?'secondary':'primary';
+ const weapon=activeWeapon();
+ pop(P.x-18,P.y-18,weapon?weapon.n:'Sin arma',weapon?weapon.c:'#8c8070');
+ snd(480,.1,'triangle');
+ endTurn(1);
 }
 
 /* ═══════════════════════ 4. DATOS: MEJORAS RÚNICAS ══════════════════════ */
@@ -865,7 +892,7 @@ function boss(n){
  en.push({boss:1,g:n,sz:64,nm:TD[n].b.nm,gx,gy,x:gx*T,y:gy*T,post:[gx,gy],hp,max:hp,dm:n<5?2:3,fl:0,wet:false,tele:null,rest:0,ch:0,cd:0,atkCd:0,ty:LT[n][0],split:false,isBach,phase:1,scd:0,emp:0})
 }
 function reset(){
- P={gx:24,gy:18,x:24*T,y:18*T,hp:6,max:6,baseMax:6,eq:{helm:null,legs:null,weapon:null,shield:null},xp:0,lvl:1,gold:0,dir:[0,1],atk:0,inv:0,dcd:0,busy:0,hit:new Set(),w:false,moving:false,dmg:0,spd:1,acd:1,rng:1,dc:1,reg:0,vamp:0,mag:0,arm:0,luck:0,expBonus:0,goldBonus:0,pend:0,sel:0,ch:[],fs:0,turn:0,path:null,want:null,click:null};
+ P={gx:24,gy:18,x:24*T,y:18*T,hp:6,max:6,baseMax:6,eq:{helm:null,legs:null,weaponPrimary:null,weaponSecondary:null,shield:null},activeWeapon:'primary',weaponCooldowns:{primary:0,secondary:0},xp:0,lvl:1,gold:0,dir:[0,1],atk:0,inv:0,dcd:0,busy:0,hit:new Set(),w:false,moving:false,dmg:0,spd:1,acd:1,rng:1,dc:1,reg:0,vamp:0,mag:0,arm:0,luck:0,expBonus:0,goldBonus:0,pend:0,sel:0,ch:[],fs:0,turn:0,path:null,want:null,click:null};
  eqDrop=[];shopOpen=false;shopItems=[];shopBoss=null;statsOpen=false;
  kills=0;shake=0;fx=[];pt=[];tr=null;layers=[];TN=0;
  for(let n=0;n<TD.length;n++){LV=n;gen(n);const L={map,en:[],it:[]};layers.push(L);en=L.en;it=L.it;P.gx=24;P.gy=n?30:18;for(let i=0;i<8;i++)spawn();boss(n)}
@@ -894,6 +921,8 @@ function pickup(){
 }
 function endTurn(n=1,skip=false){
  P.busy=.16;P.turn++;P.dcd=Math.max(0,P.dcd-1);pickup();
+ P.weaponCooldowns.primary=Math.max(0,P.weaponCooldowns.primary-1);
+ P.weaponCooldowns.secondary=Math.max(0,P.weaponCooldowns.secondary-1);
  if(P.reg){P.rt=(P.rt||0)+P.reg;if(P.rt>=12){P.rt=0;if(P.hp<P.max){P.hp++;pop(P.x,P.y-16,'+½ ♥','#7fd4a8')}}}
  if(!skip)for(let i=0;i<n&&S==='play';i++)enemyPhase();
  if(P.turn%8===0&&en.length<Math.min(18,6+P.lvl*2))spawn()
@@ -998,10 +1027,10 @@ function bstep(e,tx,ty){
 }
 
 /* ═══════════════════════ 10. COMBATE ════════════════════════════════════ */
-function hurtE(e){
+function hurtE(e,hitIndex=0){
  const st=getStats();
  const d=st.dmg;
- e.hp-=d;e.fl=.14;pop(e.x+8,e.y,d,'#fff');snd(130,.08);burst(e.x+hf(e),e.y+hf(e),12,ET[e.ty].c,150);
+ e.hp-=d;e.fl=.14;pop(e.x+8+hitIndex*12,e.y-hitIndex*12,d,'#fff');snd(hitIndex?180:130,.08);burst(e.x+hf(e),e.y+hf(e),12,ET[e.ty].c,150);
  if(e.boss&&e.isBach&&e.hp>0){
   const r=e.hp/e.max;
   const np=r<=0.30?3:r<=0.65?2:1;
@@ -1066,8 +1095,14 @@ function hurtP(dm,e){
  if(P.hp<=0){P.hp=0;S='dead';deadT=0;snd(60,.5,'sawtooth')}
 }
 function doAttack(e){
+ if(weaponCooldown()>0){pop(P.x-10,P.y-16,'Recarga: '+weaponCooldown()+'T','#e6b85c');return}
  const vx=e.x+hf(e)-P.x-16,vy=e.y+hf(e)-P.y-16,vd=Math.hypot(vx,vy)||1;P.dir=[vx/vd,vy/vd];P.atk=.28*P.acd;
- hurtE(e);snd(320,.07,'sawtooth');endTurn(1,Math.random()<1-P.acd)
+ const weapon=activeWeapon(),weaponSlot=activeWeaponSlot(),hits=weapon&&weapon.doubleAttack?2:1;
+ P.atkHits=hits;
+ for(let i=0;i<hits&&e.hp>0&&en.includes(e);i++)hurtE(e,i);
+ if(hits>1)pop(P.x-14,P.y-26,'¡DOBLE ATAQUE!','#ffe484');
+ snd(320,.07,'sawtooth');endTurn(1,Math.random()<1-P.acd);
+ if(weapon&&weapon.cooldown&&P.eq[weaponSlot]===weapon)P.weaponCooldowns[weaponSlot==='weaponSecondary'?'secondary':'primary']=weapon.cooldown
 }
 function actWait(){
  const reach=getAtkReach();
@@ -1483,19 +1518,24 @@ function draw(){
  if(P.atk>0){
   const reach=getAtkReach();
   const px_=P.x+16,py_=P.y+16;
-  if(reach>1||eqBonuses().bow){
+  if(reach>1||(activeWeapon()&&activeWeapon().bow)){
    const dist=(1-P.atk/(.28*P.acd))*reach*T;
    const ax=px_+P.dir[0]*dist,ay=py_+P.dir[1]*dist;
    const ang=Math.atan2(P.dir[1],P.dir[0]);
-   ctx.save();ctx.translate(ax,ay);ctx.rotate(ang);
-   ctx.fillStyle='#e8d8a8';ctx.fillRect(-8,-1.5,12,3);
-   ctx.fillStyle='#7fe8ff';ctx.beginPath();ctx.moveTo(8,0);ctx.lineTo(2,-4);ctx.lineTo(2,4);ctx.closePath();ctx.fill();
-   ctx.restore();
+   for(let i=0;i<(P.atkHits||1);i++){
+    ctx.save();ctx.translate(ax-P.dir[1]*i*5,ay+P.dir[0]*i*5);ctx.rotate(ang);
+    ctx.fillStyle='#e8d8a8';ctx.fillRect(-8,-1.5,12,3);
+    ctx.fillStyle='#7fe8ff';ctx.beginPath();ctx.moveTo(8,0);ctx.lineTo(2,-4);ctx.lineTo(2,4);ctx.closePath();ctx.fill();
+    ctx.restore();
+   }
   }else{
-   const pr=1-P.atk/(.28*P.acd),a=Math.atan2(P.dir[1],P.dir[0])+(pr-.5)*2.6;ctx.lineCap='butt';
-   for(let i=0;i<4;i++){
-    ctx.strokeStyle=i===0?'rgba(255,245,210,.95)':`rgba(180,210,255,${.7-i*.18})`;
-    ctx.lineWidth=10-i*2.5;ctx.beginPath();ctx.arc(px_,py_,30*P.rng,a-1+i*.12,a);ctx.stroke()
+   const pr=1-P.atk/(.28*P.acd),base=Math.atan2(P.dir[1],P.dir[0])+(pr-.5)*2.6;ctx.lineCap='butt';
+   for(let hit=0;hit<(P.atkHits||1);hit++){
+    const a=base+(hit?-.8:0);
+    for(let i=0;i<4;i++){
+     ctx.strokeStyle=i===0?(hit?'rgba(255,220,140,.98)':'rgba(255,245,210,.95)'):`rgba(180,210,255,${.7-i*.18})`;
+     ctx.lineWidth=10-i*2.5;ctx.beginPath();ctx.arc(px_,py_,30*getAtkReach(),a-1+i*.12,a);ctx.stroke()
+    }
    }
   }
  }
@@ -1565,6 +1605,12 @@ function draw(){
  tx(`ORO: ${st.goldPct}%`,365,88,'#e6b85c','left',10.5);
  tx(`ARMADURA: ${st.arm}  [C]`,W-18,88,'#9ca4c0','right',10.5);
 
+ const primary=P.eq.weaponPrimary,secondary=P.eq.weaponSecondary;
+ const weaponLabel=(weapon,slot)=>`${weapon?weapon.n:'Vacía'}${P.activeWeapon===slot?' · ACTIVA':''}${P.weaponCooldowns[slot]?` · ${P.weaponCooldowns[slot]}T` :''}`;
+ bevelBox(8,110,W-16,24,'rgba(14,10,20,.9)','#5c4424','#e88848');
+ tx(`PRINCIPAL: ${weaponLabel(primary,'primary')}`,18,116,primary?primary.c:'#8c8070','left',10);
+ tx(`SECUNDARIA: ${weaponLabel(secondary,'secondary')}  [X] CAMBIAR`,W-18,116,secondary?secondary.c:'#8c8070','right',10);
+
  if(P.w&&S==='play'){
   bevelBox(W/2-145,H-36,290,26,'rgba(10,16,28,.9)','#3a6898','#88c4f8');
   tx('AGUA PROFUNDA: 2 TURNOS POR PASO',W/2,H-29,'#b8e0ff','center',11);
@@ -1620,7 +1666,8 @@ function draw(){
   px(ctx,114,302,W-228,1,'#5c4424');
   const eqLine=(sl,lbl)=>`${lbl}: ${P.eq[sl]?P.eq[sl].n:'Ninguno'}`;
   tx(`${eqLine('helm','Malla')}  ·  ${eqLine('legs','Pantalón')}`,W/2,314,'#b8b0a0','center',10.5);
-  tx(`${eqLine('weapon','Arma')}  ·  ${eqLine('shield','Escudo')}`,W/2,332,'#b8b0a0','center',10.5);
+  tx(`Principal: ${P.eq.weaponPrimary?P.eq.weaponPrimary.n:'Ninguna'}  ·  Secundaria: ${P.eq.weaponSecondary?P.eq.weaponSecondary.n:'Ninguna'}`,W/2,332,'#b8b0a0','center',10.5);
+  tx(`${eqLine('shield','Escudo')}  ·  Activa: ${P.activeWeapon==='secondary'?'Secundaria':'Principal'}${weaponCooldown()?` · Recarga ${weaponCooldown()} turno(s)`:''}`,W/2,350,'#b8b0a0','center',10.5);
   tx('Pulsa [C] o [ESC] para cerrar',W/2,H-78,'#8c8070','center',11);
  }
 
@@ -1821,6 +1868,7 @@ addEventListener('keydown',e=>{
  k[e.code]=1;
  if(S==='shop'){shopKey(e.code);e.preventDefault();return}
  if(S==='play'&&!e.repeat&&(e.code==='KeyC'||(statsOpen&&e.code==='Escape'))){statsOpen=!statsOpen;e.preventDefault();return}
+ if(S==='play'&&!statsOpen&&!e.repeat&&e.code==='KeyX'){switchWeapon();e.preventDefault();return}
  if(statsOpen){e.preventDefault();return}
  if(S==='play'&&!e.repeat&&(e.code==='Space'||e.code==='KeyJ'))P.want='atk';
  if(S==='up'){upKey(e.code);e.preventDefault()}

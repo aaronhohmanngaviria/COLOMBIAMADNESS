@@ -21,3 +21,16 @@ npm-debug.log*
 dist/
 build/
 *.tmp
+
+# Unity generados; mantener Assets y Art versionados
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emoryCaptures/
+.vs/
+*.csproj
+*.sln
