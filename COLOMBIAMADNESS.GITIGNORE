@@ -1,0 +1,23 @@
+# Dependencias
+node_modules/
+vendor/
+
+# Sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editores
+.vscode/
+.idea/
+*.swp
+*~
+
+# Logs
+*.log
+npm-debug.log*
+
+# Builds / temporales
+dist/
+build/
+*.tmp
